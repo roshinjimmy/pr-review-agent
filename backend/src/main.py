@@ -13,6 +13,7 @@ os.environ["OPENROUTER_API_KEY"] = openrouter_key
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from src.models.diff import DiffRequest, PRReviewRequest
 from src.models.review import ReviewResponse
 from src.models.errors import ErrorResponse, ErrorDetail
@@ -34,6 +35,16 @@ logger = setup_logger(__name__)
 
 app = FastAPI(title="PR Review Agent", version="0.1.0")
 startup_time = datetime.now(timezone.utc)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 
 @app.exception_handler(GitHubAPIError)
