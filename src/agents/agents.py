@@ -1,5 +1,6 @@
 from crewai import Agent
 
+MODEL_ID = "openrouter/openai/gpt-4o-mini"
 
 readability_agent = Agent(
     role="Readability Reviewer",
@@ -9,6 +10,7 @@ readability_agent = Agent(
         "You pay attention to naming, comments, formatting, and overall clarity "
         "to ensure code is easy to understand and maintain."
     ),
+    llm=MODEL_ID,
 )
 
 
@@ -20,6 +22,7 @@ logic_agent = Agent(
         "correctness. You carefully reason about branches, edge cases, and "
         "error handling."
     ),
+    llm=MODEL_ID,
 )
 
 
@@ -31,6 +34,7 @@ performance_agent = Agent(
         "redundant operations, and unnecessary computations, and suggest "
         "simpler, faster alternatives where possible."
     ),
+    llm=MODEL_ID,
 )
 
 
@@ -41,6 +45,7 @@ security_agent = Agent(
         "You are a security-focused engineer. You scan for unsafe patterns, "
         "insecure API usage, injection risks, and hardcoded secrets."
     ),
+    llm=MODEL_ID,
 )
 
 
@@ -51,4 +56,5 @@ consolidation_agent = Agent(
         "You act as a lead reviewer who sees all individual findings and "
         "produces a clean, consolidated review suitable for GitHub comments."
     ),
+    llm=MODEL_ID,
 )
