@@ -18,53 +18,76 @@ def build_review_crew() -> Crew:
 
     readability_task = Task(
         description=(
-            "Analyze the provided structured diff for readability issues, "
-            "including naming, comments, formatting, and clarity. "
-            "Return findings as JSON array with file, line, severity, issue, recommendation."
+            "Review this code for readability issues:\n\n{diff_context}\n\n"
+            "Analyze ONLY the lines marked with (+) for: poor variable/function naming, "
+            "missing comments, inconsistent formatting, unclear logic flow. "
+            "For each issue found, return a JSON object with: file (string), line (number), "
+            "severity (one of: critical, error, warning, high, moderate, medium, low, info), "
+            "issue (brief description), recommendation (how to fix), source (must be 'readability'). "
+            "Return ONLY a JSON array of findings, nothing else."
         ),
         agent=readability_agent,
-        expected_output="A JSON array of readability findings.",
+        expected_output="A JSON array of readability findings with source='readability'.",
     )
 
     logic_task = Task(
         description=(
-            "Review the structured diff for logic errors, missing edge cases, "
-            "and potential bugs. "
-            "Return findings as JSON array with file, line, severity, issue, recommendation."
+            "Review this code for logic errors and bugs:\n\n{diff_context}\n\n"
+            "Analyze ONLY the lines marked with (+) for: incorrect conditions, missing null/undefined checks, "
+            "off-by-one errors, incorrect return values, missing error handling, unreachable code. "
+            "For each issue found, return a JSON object with: file (string), line (number), "
+            "severity (one of: critical, error, warning, high, moderate, medium, low, info), "
+            "issue (brief description), recommendation (how to fix), source (must be 'logic'). "
+            "Return ONLY a JSON array of findings, nothing else."
         ),
         agent=logic_agent,
-        expected_output="A JSON array of logic and bug findings.",
+        expected_output="A JSON array of logic and bug findings with source='logic'.",
     )
 
     performance_task = Task(
         description=(
-            "Inspect the structured diff for performance issues such as "
-            "inefficient loops, redundant work, or unnecessary allocations. "
-            "Return findings as JSON array with file, line, severity, issue, recommendation."
+            "Review this code for performance issues:\n\n{diff_context}\n\n"
+            "Analyze ONLY the lines marked with (+) for: nested loops with O(n²) or worse complexity, "
+            "redundant operations inside loops, unnecessary memory allocations, inefficient algorithms, "
+            "repeated expensive operations that should be cached, N+1 query patterns. "
+            "For each issue found, return a JSON object with: file (string), line (number), "
+            "severity (one of: critical, error, warning, high, moderate, medium, low, info), "
+            "issue (brief description), recommendation (how to fix), source (must be 'performance'). "
+            "Return ONLY a JSON array of findings, nothing else."
         ),
         agent=performance_agent,
-        expected_output="A JSON array of performance findings.",
+        expected_output="A JSON array of performance findings with source='performance'.",
     )
 
     security_task = Task(
         description=(
-            "Scan the structured diff for security issues such as unsafe "
-            "patterns, insecure APIs, injection risks, and hardcoded secrets. "
-            "Return findings as JSON array with file, line, severity, issue, recommendation."
+            "Review this code for security vulnerabilities:\n\n{diff_context}\n\n"
+            "Analyze ONLY the lines marked with (+) for: SQL/command injection risks, XSS vulnerabilities, "
+            "hardcoded secrets/credentials, insecure APIs, missing input validation, unsafe deserialization, "
+            "path traversal, SSRF, insecure random number generation. "
+            "For each issue found, return a JSON object with: file (string), line (number), "
+            "severity (one of: critical, error, warning, high, moderate, medium, low, info), "
+            "issue (brief description), recommendation (how to fix), source (must be 'security'). "
+            "Return ONLY a JSON array of findings, nothing else."
         ),
         agent=security_agent,
-        expected_output="A JSON array of security findings.",
+        expected_output="A JSON array of security findings with source='security'.",
     )
 
     consolidation_task = Task(
         description=(
             "Combine and deduplicate findings from readability, logic, "
             "performance, and security into a single, clean JSON array of review comments. "
-            "Each comment must have: file, line, severity, issue, recommendation, source."
+            "Each comment must have: file, line, severity, issue, recommendation, and source. "
+            "Severity must be one of: 'critical', 'error', 'warning', 'high', 'moderate', 'medium', 'low', 'info'. "
+            "IMPORTANT: Keep the source field as a single string value from the original agent "
+            "(e.g., 'readability', 'logic', 'performance', or 'security'). "
+            "Do NOT combine multiple sources into one field. If the same issue appears from multiple agents, "
+            "pick the most relevant source or create separate comments."
         ),
         agent=consolidation_agent,
         expected_output=(
-            "A JSON object with a 'comments' array containing consolidated review comments."
+            "A JSON object with a 'comments' array where each comment has a single source value."
         ),
     )
 
@@ -95,10 +118,25 @@ def run_review_pipeline(structured_diff: Dict[str, Any]) -> Dict[str, Any]:
     import json
     import re
 
+    # Format the diff data as a readable string for the LLM
+    diff_context = "Code changes to review:\n\n"
+    for file_data in structured_diff.get("files", []):
+        diff_context += f"File: {file_data['file']}\n"
+        diff_context += "Changes:\n"
+        for change in file_data.get("changes", []):
+            if change["type"] == "addition":
+                diff_context += f"  Line {change['line']} (+): {change['content']}\n"
+            elif change["type"] == "deletion":
+                diff_context += f"  Line {change['line']} (-): {change['content']}\n"
+        diff_context += "\n"
+
     crew = build_review_crew()
     
-    # Pass the structured diff to the crew
-    result = crew.kickoff(inputs={"structured_diff": structured_diff})
+    # Pass both structured and formatted diff to the crew
+    result = crew.kickoff(inputs={
+        "structured_diff": structured_diff,
+        "diff_context": diff_context
+    })
     
     # Parse the crew output
     result_str = str(result)
