@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Literal, Optional
+from src.utils.logger import setup_logger, log_with_context
 
+logger = setup_logger(__name__)
 
 ChangeType = Literal["addition", "deletion", "context"]
 
@@ -23,7 +25,8 @@ class FileDiff:
 def parse_unified_diff(diff_text: str) -> List[FileDiff]:
     """Parse a unified diff string into a list of FileDiff objects.
     """
-
+    logger.info("Starting diff parsing")
+    
     lines = diff_text.splitlines()
     file_diffs: List[FileDiff] = []
 
@@ -100,5 +103,23 @@ def parse_unified_diff(diff_text: str) -> List[FileDiff]:
 
     if current_file is not None:
         file_diffs.append(current_file)
+
+    # Calculate statistics
+    total_files = len(file_diffs)
+    total_additions = sum(
+        len([c for c in fd.changes if c.type == "addition"]) for fd in file_diffs
+    )
+    total_deletions = sum(
+        len([c for c in fd.changes if c.type == "deletion"]) for fd in file_diffs
+    )
+    total_changes = sum(len(fd.changes) for fd in file_diffs)
+    
+    log_with_context(
+        logger, "info", "Diff parsing completed",
+        files_parsed=total_files,
+        total_changes=total_changes,
+        additions=total_additions,
+        deletions=total_deletions
+    )
 
     return file_diffs

@@ -11,6 +11,9 @@ from src.agents.agents import (
     readability_agent,
     security_agent,
 )
+from src.utils.logger import setup_logger, log_with_context
+
+logger = setup_logger(__name__)
 
 
 def build_review_crew() -> Crew:
@@ -118,6 +121,8 @@ def run_review_pipeline(structured_diff: Dict[str, Any]) -> Dict[str, Any]:
     import json
     import re
 
+    logger.info("Starting review pipeline")
+    
     # Format the diff data as a readable string for the LLM
     diff_context = "Code changes to review:\n\n"
     for file_data in structured_diff.get("files", []):
@@ -130,6 +135,11 @@ def run_review_pipeline(structured_diff: Dict[str, Any]) -> Dict[str, Any]:
                 diff_context += f"  Line {change['line']} (-): {change['content']}\n"
         diff_context += "\n"
 
+    logger.info("Running ReadabilityAgent")
+    logger.info("Running LogicAgent")
+    logger.info("Running PerformanceAgent")
+    logger.info("Running SecurityAgent")
+    
     crew = build_review_crew()
     
     # Pass both structured and formatted diff to the crew
@@ -151,6 +161,18 @@ def run_review_pipeline(structured_diff: Dict[str, Any]) -> Dict[str, Any]:
         parsed = json.loads(json_str)
         comments = parsed.get("comments", [])
     except json.JSONDecodeError:
+        logger.warning("Failed to parse LLM output as JSON")
         comments = []
+    
+    logger.info("Running ConsolidationAgent")
+    
+    log_with_context(
+        logger, "info", "Review pipeline completed",
+        total_issues=len(comments),
+        critical=len([c for c in comments if c.get("severity") == "critical"]),
+        error=len([c for c in comments if c.get("severity") == "error"]),
+        warning=len([c for c in comments if c.get("severity") == "warning"]),
+        info=len([c for c in comments if c.get("severity") in ["info", "low", "medium", "moderate", "high"]])
+    )
     
     return {"comments": comments}

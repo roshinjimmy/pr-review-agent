@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -27,8 +28,12 @@ from src.services.github_service import (
     NetworkError
 )
 from src.utils.diff_parser import parse_unified_diff
+from src.utils.logger import setup_logger, log_with_context
+
+logger = setup_logger(__name__)
 
 app = FastAPI(title="PR Review Agent", version="0.1.0")
+startup_time = datetime.utcnow()
 
 
 @app.exception_handler(GitHubAPIError)
@@ -64,12 +69,19 @@ async def github_api_error_handler(request: Request, exc: GitHubAPIError):
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    uptime_seconds = (datetime.utcnow() - startup_time).total_seconds()
+    return {
+        "status": "ok",
+        "uptime_seconds": uptime_seconds,
+        "version": "0.1.0"
+    }
 
 
 @app.post("/review/diff", response_model=ReviewResponse)
 async def review_diff(request: DiffRequest) -> ReviewResponse:
     """Review a raw unified diff."""
+    log_with_context(logger, "info", "Received diff review request", endpoint="/review/diff")
+    
     try:
         # Validate diff is not empty
         if not request.diff or request.diff.strip() == "":
@@ -127,11 +139,24 @@ async def review_diff(request: DiffRequest) -> ReviewResponse:
         review_output = run_review_pipeline(structured_diff)
 
         # Return validated Pydantic response
-        return ReviewResponse(**review_output)
+        response = ReviewResponse(**review_output)
+        
+        log_with_context(
+            logger, "info", "Diff review completed successfully",
+            endpoint="/review/diff",
+            total_comments=len(response.comments)
+        )
+        
+        return response
         
     except HTTPException:
         raise
     except Exception as e:
+        log_with_context(
+            logger, "error", "Unexpected error in diff review",
+            endpoint="/review/diff",
+            error=str(e)
+        )
         raise HTTPException(
             status_code=500,
             detail={
@@ -147,6 +172,13 @@ async def review_diff(request: DiffRequest) -> ReviewResponse:
 @app.post("/review/pr", response_model=ReviewResponse)
 async def review_pr(request: PRReviewRequest) -> ReviewResponse:
     """Review a GitHub Pull Request by fetching its diff."""
+    log_with_context(
+        logger, "info", "Received PR review request",
+        endpoint="/review/pr",
+        repo=f"{request.repo_owner}/{request.repo_name}",
+        pr_number=request.pr_number
+    )
+    
     try:
         # Fetch the PR diff from GitHub (errors handled by exception handler)
         diff_text = await fetch_pr_diff(
@@ -181,12 +213,29 @@ async def review_pr(request: PRReviewRequest) -> ReviewResponse:
         review_output = run_review_pipeline(structured_diff)
 
         # Return validated Pydantic response
-        return ReviewResponse(**review_output)
+        response = ReviewResponse(**review_output)
+        
+        log_with_context(
+            logger, "info", "PR review completed successfully",
+            endpoint="/review/pr",
+            repo=f"{request.repo_owner}/{request.repo_name}",
+            pr_number=request.pr_number,
+            total_comments=len(response.comments)
+        )
+        
+        return response
         
     except GitHubAPIError:
         # Re-raise to be caught by exception handler
         raise
     except Exception as e:
+        log_with_context(
+            logger, "error", "Unexpected error in PR review",
+            endpoint="/review/pr",
+            repo=f"{request.repo_owner}/{request.repo_name}",
+            pr_number=request.pr_number,
+            error=str(e)
+        )
         # Wrap unexpected errors
         raise HTTPException(
             status_code=500,

@@ -2,6 +2,9 @@
 
 import httpx
 from typing import Optional
+from src.utils.logger import setup_logger, log_with_context
+
+logger = setup_logger(__name__)
 
 
 class GitHubAPIError(Exception):
@@ -66,15 +69,36 @@ async def fetch_pr_diff(
         "X-GitHub-Api-Version": "2022-11-28"
     }
     
+    log_with_context(
+        logger, "info", "Fetching PR diff from GitHub",
+        repo=f"{repo_owner}/{repo_name}",
+        pr_number=pr_number,
+        url=url
+    )
+    
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, headers=headers, timeout=30.0)
             response.raise_for_status()
             
             diff_text = response.text
+            diff_size = len(diff_text)
+            
+            log_with_context(
+                logger, "info", "Successfully fetched PR diff",
+                repo=f"{repo_owner}/{repo_name}",
+                pr_number=pr_number,
+                status_code=response.status_code,
+                diff_size_bytes=diff_size
+            )
             
             # Check for empty PR
             if not diff_text or diff_text.strip() == "":
+                log_with_context(
+                    logger, "warning", "Empty PR detected",
+                    repo=f"{repo_owner}/{repo_name}",
+                    pr_number=pr_number
+                )
                 raise EmptyPRError(
                     f"Pull request #{pr_number} has no file changes",
                     details=f"GET {url} returned empty diff"
@@ -82,6 +106,11 @@ async def fetch_pr_diff(
             
             # Check for binary files indicator
             if "Binary files" in diff_text or "GIT binary patch" in diff_text:
+                log_with_context(
+                    logger, "warning", "Binary files detected in PR",
+                    repo=f"{repo_owner}/{repo_name}",
+                    pr_number=pr_number
+                )
                 raise BinaryDiffError(
                     "Pull request contains binary files that cannot be reviewed as text",
                     details="Detected binary file markers in diff output"
@@ -91,6 +120,14 @@ async def fetch_pr_diff(
             
         except httpx.HTTPStatusError as e:
             details = f"GET {url} returned {e.response.status_code}"
+            
+            log_with_context(
+                logger, "error", "GitHub API request failed",
+                repo=f"{repo_owner}/{repo_name}",
+                pr_number=pr_number,
+                status_code=e.response.status_code,
+                error=str(e)
+            )
             
             if e.response.status_code == 404:
                 raise PRNotFoundError(
