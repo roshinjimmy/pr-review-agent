@@ -61,7 +61,6 @@ A fully automated Pull Request review system powered by AI multi-agents with a m
 ## Features
 
 ### Modern Web Interface
-- **Clean React UI** - Minimal, developer-friendly interface built with React + Vite
 - **Dual Input Modes** - Tab-based interface for GitHub PR or raw diff input
 - **Real-time Results** - Display review comments with color-coded severity levels
 - **Smart Diff Handling** - Automatic conversion of escaped newlines in pasted diffs
@@ -369,18 +368,18 @@ diff --git a/app/processor.py b/app/processor.py
 **Request:**
 ```json
 {
-  "repo_owner": "paritomarrr",
-  "repo_name": "gharsetu-frontend",
-  "pr_number": 3,
+  "repo_owner": "owner",
+  "repo_name": "repository",
+  "pr_number": 123,
   "github_token": "ghp_xxxxxxxxxxxxxxxxxxxx"
 }
 ```
 
 **Console Logs (Structured JSON):**
 ```json
-{"timestamp": "2025-11-26T12:53:15.629474Z", "level": "INFO", "logger": "src.main", "message": "Received PR review request", "endpoint": "/review/pr", "repo": "paritomarrr/gharsetu-frontend", "pr_number": 3}
+{"timestamp": "2025-11-26T12:53:15.629474Z", "level": "INFO", "logger": "src.main", "message": "Received PR review request", "endpoint": "/review/pr", "repo": "owner/repository", "pr_number": 123}
 
-{"timestamp": "2025-11-26T12:53:16.252762Z", "level": "INFO", "logger": "src.services.github_service", "message": "Successfully fetched PR diff", "repo": "paritomarrr/gharsetu-frontend", "pr_number": 3, "status_code": 200, "diff_size_bytes": 17046}
+{"timestamp": "2025-11-26T12:53:16.252762Z", "level": "INFO", "logger": "src.services.github_service", "message": "Successfully fetched PR diff", "repo": "owner/repository", "pr_number": 123, "status_code": 200, "diff_size_bytes": 17046}
 
 {"timestamp": "2025-11-26T12:53:16.253682Z", "level": "INFO", "logger": "src.utils.diff_parser", "message": "Diff parsing completed", "files_parsed": 8, "total_changes": 394, "additions": 223, "deletions": 28}
 
@@ -560,7 +559,7 @@ From actual production runs:
 ### Performance Improvements
 - **Before optimization**: 60 seconds (5 agents sequential)
 - **After optimization**: 15-20 seconds (4 agents parallel)
-- **Speed improvement**: ~70% faster ⚡
+- **Speed improvement**: ~70% faster
 - **Quality maintained**: Zero degradation in review accuracy
 
 ### Optimization Techniques Applied
