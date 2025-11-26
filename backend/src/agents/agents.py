@@ -11,6 +11,8 @@ readability_agent = Agent(
         "to ensure code is easy to understand and maintain."
     ),
     llm=MODEL_ID,
+    allow_delegation=False,
+    verbose=False,
 )
 
 
@@ -23,6 +25,8 @@ logic_agent = Agent(
         "error handling."
     ),
     llm=MODEL_ID,
+    allow_delegation=False,
+    verbose=False,
 )
 
 
@@ -35,6 +39,8 @@ performance_agent = Agent(
         "simpler, faster alternatives where possible."
     ),
     llm=MODEL_ID,
+    allow_delegation=False,
+    verbose=False,
 )
 
 
@@ -46,6 +52,8 @@ security_agent = Agent(
         "insecure API usage, injection risks, and hardcoded secrets."
     ),
     llm=MODEL_ID,
+    allow_delegation=False,
+    verbose=False,
 )
 
 
@@ -57,4 +65,6 @@ consolidation_agent = Agent(
         "produces a clean, consolidated review suitable for GitHub comments."
     ),
     llm=MODEL_ID,
+    allow_delegation=False,
+    verbose=False,
 )
