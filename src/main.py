@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -33,7 +33,7 @@ from src.utils.logger import setup_logger, log_with_context
 logger = setup_logger(__name__)
 
 app = FastAPI(title="PR Review Agent", version="0.1.0")
-startup_time = datetime.utcnow()
+startup_time = datetime.now(timezone.utc)
 
 
 @app.exception_handler(GitHubAPIError)
@@ -69,7 +69,7 @@ async def github_api_error_handler(request: Request, exc: GitHubAPIError):
 
 @app.get("/health")
 async def health() -> dict:
-    uptime_seconds = (datetime.utcnow() - startup_time).total_seconds()
+    uptime_seconds = (datetime.now(timezone.utc) - startup_time).total_seconds()
     return {
         "status": "ok",
         "uptime_seconds": uptime_seconds,
