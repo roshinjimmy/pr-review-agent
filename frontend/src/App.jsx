@@ -42,14 +42,33 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const errorMsg = errorData.error?.message || errorData.detail || `Error: ${response.statusText}`
+        let errorMsg = 'An error occurred while analyzing the PR'
+        
+        if (response.status === 404) {
+          errorMsg = errorData.detail || 'PR not found. Please check the repository and PR number.'
+        } else if (response.status === 401 || response.status === 403) {
+          errorMsg = errorData.detail || 'Invalid GitHub token or insufficient permissions.'
+        } else if (response.status === 422) {
+          errorMsg = errorData.detail || 'Invalid request format. Please check your inputs.'
+        } else if (response.status === 500) {
+          errorMsg = errorData.detail || 'Server error occurred. Please try again later.'
+        } else if (response.status === 503) {
+          errorMsg = 'Service temporarily unavailable. Please try again later.'
+        } else {
+          errorMsg = errorData.detail || errorData.error?.message || `Error: ${response.statusText}`
+        }
+        
         throw new Error(errorMsg)
       }
 
       const result = await response.json()
       setReviews(result.comments || result)
     } catch (err) {
-      setError(err.message)
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Network error: Unable to connect to the server. Please check your connection.')
+      } else {
+        setError(err.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -71,14 +90,29 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const errorMsg = errorData.error?.message || errorData.detail || `Error: ${response.statusText}`
+        let errorMsg = 'An error occurred while analyzing the diff'
+        
+        if (response.status === 422) {
+          errorMsg = errorData.detail || 'Invalid diff format. Please provide a valid unified diff.'
+        } else if (response.status === 500) {
+          errorMsg = errorData.detail || 'Server error occurred. Please try again later.'
+        } else if (response.status === 503) {
+          errorMsg = 'Service temporarily unavailable. Please try again later.'
+        } else {
+          errorMsg = errorData.detail || errorData.error?.message || `Error: ${response.statusText}`
+        }
+        
         throw new Error(errorMsg)
       }
 
       const result = await response.json()
       setReviews(result.comments || result)
     } catch (err) {
-      setError(err.message)
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Network error: Unable to connect to the server. Please check your connection.')
+      } else {
+        setError(err.message)
+      }
     } finally {
       setLoading(false)
     }
