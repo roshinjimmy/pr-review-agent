@@ -100,13 +100,21 @@ function App() {
       <div className="tabs">
         <button
           className={activeTab === 'pr' ? 'active' : ''}
-          onClick={() => setActiveTab('pr')}
+          onClick={() => {
+            setActiveTab('pr')
+            setReviews([])
+            setError(null)
+          }}
         >
           GitHub PR
         </button>
         <button
           className={activeTab === 'diff' ? 'active' : ''}
-          onClick={() => setActiveTab('diff')}
+          onClick={() => {
+            setActiveTab('diff')
+            setReviews([])
+            setError(null)
+          }}
         >
           Raw Diff
         </button>
